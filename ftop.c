@@ -7,13 +7,12 @@
 #include <ctype.h>
 #include <time.h>
 
-#define MAX_PROCESSES 128
 
 typedef struct {
     int pid;
     char name[256];
     float cpu;
-} Process
+} Process;
 
 
 float get_cpu_usage() {
@@ -70,7 +69,7 @@ float memUsage() {
 //
 int processID(Process *procs, int max) {
 
-  Dir *dir = opendir("/proc");
+  DIR *dir = opendir("/proc");
   struct dirent *entry;
   int count = 0;
 
@@ -87,7 +86,7 @@ int processID(Process *procs, int max) {
 	int pid = atoi(entry -> d_name);
 	
 	snprintf(location, sizeof(location), "/proc/%d/stat", pid);
-        FILE *fp = fopen(path, "r");
+        FILE *fp = fopen(location, "r");
         if (!fp) {
 		continue;
 	}
@@ -118,7 +117,15 @@ int processID(Process *procs, int max) {
 	
 }
 
-void print_help() {}
+void print_help() {
+
+
+}
+
+int compare_cpu(const void *a, const void *b) {
+    float diff = ((Process *)b)->cpu - ((Process *)a)->cpu;
+    return (diff > 0) - (diff < 0);
+}
 
 void chart(int row, const char *label, float percent) {
 
@@ -135,6 +142,36 @@ void chart(int row, const char *label, float percent) {
 }
 
 int main() {
+  
+initscr();
+    noecho();
+    curs_set(FALSE);
 
+    Process procs[128];    
+
+    while (1) {
+        clear();
+
+        float cpu = get_cpu_usage();
+        float mem = memUsage();
+
+        chart(0, "CPU", cpu);
+        chart(1, "MEM", mem);
+
+        int count = processID(procs, 128);
+        qsort(procs, count, sizeof(Process), compare_cpu);
+
+        mvprintw(3, 0, "  PID   CPU%%  NAME");
+        for (int i = 0; i < count && i < 20; i++) {
+            mvprintw(4 + i, 0, "%5d  %5.1f  %s",
+                     procs[i].pid, procs[i].cpu, procs[i].name);
+        }
+
+        refresh();
+        usleep(500000);
+    }
+
+    endwin();
+    return 0;
 
 }
