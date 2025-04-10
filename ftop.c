@@ -7,7 +7,6 @@
 #include <ctype.h>
 #include <time.h>
 
-
 typedef struct {
     int pid;
     char name[256];
@@ -64,9 +63,10 @@ float memUsage() {
 
 }
 
+
+
 // float storageUsage(){}
 // save for future ideas
-//
 int processID(Process *procs, int max) {
 
   DIR *dir = opendir("/proc");
@@ -75,7 +75,8 @@ int processID(Process *procs, int max) {
 
 
   while ((entry = readdir(dir)) != NULL && count < max) {
-	
+
+
 	char location[256];
 
 	if (!isdigit(entry->d_name[0])) {
@@ -117,10 +118,7 @@ int processID(Process *procs, int max) {
 	
 }
 
-void print_help() {
 
-
-}
 
 int compare_cpu(const void *a, const void *b) {
     float diff = ((Process *)b)->cpu - ((Process *)a)->cpu;
@@ -143,27 +141,31 @@ void chart(int row, const char *label, float percent) {
 
 int main() {
   
-initscr();
+
+    initscr();
     noecho();
     curs_set(FALSE);
 
     Process procs[128];    
 
+    char logo[] = "Welcome to Ftop";
     while (1) {
-        clear();
+        clear();	
+
+	mvprintw(0, 0, logo);
 
         float cpu = get_cpu_usage();
         float mem = memUsage();
 
-        chart(0, "CPU", cpu);
-        chart(1, "MEM", mem);
+        chart(1, "CPU", cpu);
+        chart(2, "MEM", mem);
 
         int count = processID(procs, 128);
         qsort(procs, count, sizeof(Process), compare_cpu);
 
-        mvprintw(3, 0, "  PID   CPU%%  NAME");
+        mvprintw(6, 0, " PID   CPU%%  NAME");
         for (int i = 0; i < count && i < 20; i++) {
-            mvprintw(4 + i, 0, "%5d  %5.1f  %s",
+            mvprintw(7 + i, 0, "%5d  %5.1f  %s",
                      procs[i].pid, procs[i].cpu, procs[i].name);
         }
 
