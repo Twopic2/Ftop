@@ -6,6 +6,9 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <time.h>
+#include <sys/statvfs.h>
+
+#include "disk.h"
 
 #define MAX_CORES 128
 #define CORES_PER_COLUMN 10
@@ -24,6 +27,7 @@ typedef struct {
 
 int coreAmount = 0;
 coreStat cores[MAX_CORES];
+
 
 void amountCores() {
     FILE *fp = fopen("/proc/stat", "r");
@@ -148,6 +152,8 @@ int main() {
 
     curs_set(FALSE);
 
+    
+
     amountCores();
     Process procs[256];   
     float core_usages[MAX_CORES]; 
@@ -158,6 +164,9 @@ int main() {
         
         coreUsagefunc(core_usages);
         float mem = memUsage();
+
+        float disk = diskUsage("/");
+
 
         int base_row = 2;
         for (int i = 0; i < coreAmount; i++) {
@@ -174,10 +183,14 @@ int main() {
         int mem_row = base_row + CORES_PER_COLUMN + 1;
         chart(mem_row, 0, "MEM", mem);
 
+        int disk_row = mem_row + 4;
+        chart(disk_row, 21, "Disk IO", disk);
+
+
         int count = processID(procs, 128);
         qsort(procs, count, sizeof(Process), compare_cpu);
 
-        int proc_row = mem_row + 2;
+        int proc_row = disk_row + 2;
         mvprintw(proc_row, 0, " PID   CPU%%  NAME");
         for (int i = 0; i < count; i++) {
              mvprintw(proc_row + 1 + i, 0, "%5d  %5.1f  %s", procs[i].pid, procs[i].cpu, procs[i].name);
