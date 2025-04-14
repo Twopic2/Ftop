@@ -180,12 +180,11 @@ int main() {
         int proc_row = mem_row + 2;
         mvprintw(proc_row, 0, " PID   CPU%%  NAME");
         for (int i = 0; i < count; i++) {
-            mvprintw(proc_row + 1 + i, 0, "%5d  %5.1f  %s",
-                     procs[i].pid, procs[i].cpu, procs[i].name);
+             mvprintw(proc_row + 1 + i, 0, "%5d  %5.1f  %s", procs[i].pid, procs[i].cpu, procs[i].name);
         }
 
         refresh();
-        usleep(50000);
+        usleep(500000);
     }
 
     endwin();
