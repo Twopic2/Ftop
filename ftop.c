@@ -185,7 +185,7 @@ int main() {
         }
 
         refresh();
-        usleep(1000000);
+        usleep(50000);
     }
 
     endwin();
