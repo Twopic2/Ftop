@@ -4,6 +4,10 @@
 
 struct statvfs stat;
 
+//printf("  Total: %.2f GB\n", total / 1e9);
+//printf("  Used:  %.2f GB\n", used / 1e9);
+//printf("  Free:  %.2f GB\n", free / 1e9);
+//printf("  Usage: %.2f%%\n", used_percent);
 
 float diskUsage(char *path) {
 
@@ -17,11 +21,6 @@ float diskUsage(char *path) {
     unsigned long used = total - free;
 
     double used_percent = (double)used / total * 100.0;
-
-    printf("  Total: %.2f GB\n", total / 1e9);
-    printf("  Used:  %.2f GB\n", used / 1e9);
-    printf("  Free:  %.2f GB\n", free / 1e9);
-    printf("  Usage: %.2f%%\n", used_percent);
 
     return (100.0 * used) / total;
 }

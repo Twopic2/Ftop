@@ -3,4 +3,6 @@
 
 float diskUsage();
 
+long diskTotal();
+
 #endif

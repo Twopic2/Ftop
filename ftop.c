@@ -9,6 +9,7 @@
 #include <sys/statvfs.h>
 
 #include "disk.h"
+#include "cpuinfo.c"
 
 #define MAX_CORES 128
 #define CORES_PER_COLUMN 10
@@ -152,21 +153,29 @@ int main() {
 
     curs_set(FALSE);
 
-    
-
     amountCores();
     Process procs[256];   
     float core_usages[MAX_CORES]; 
 
     while (1) {
         clear();
-        mvprintw(0, 0, "Welcome to Ftop");
         
+        start_color();
+        init_pair(1, COLOR_YELLOW, COLOR_GREEN);
+        init_pair(2, COLOR_CYAN, COLOR_BLUE);
+        init_pair(3, COLOR_BLACK, COLOR_WHITE);
+        init_pair(4, COLOR_RED, COLOR_MAGENTA); 
+
+        mvprintw(0, 0, "Welcome to Ftop");
+    
         coreUsagefunc(core_usages);
         float mem = memUsage();
 
-        float disk = diskUsage("/");
+        long uptime = show_uptime();
 
+        float disk = diskUsage("/");
+        
+        long total_disk = diskTotal("/");
 
         int base_row = 2;
         for (int i = 0; i < coreAmount; i++) {
@@ -181,23 +190,30 @@ int main() {
         }
 
         int mem_row = base_row + CORES_PER_COLUMN + 1;
+        attron(COLOR_PAIR(1));
         chart(mem_row, 0, "MEM", mem);
+        attroff(COLOR_PAIR(1));
 
         int disk_row = mem_row + 4;
-        chart(disk_row, 21, "Disk IO", disk);
+        chart(disk_row, 0, "Disk Usage", disk);
 
+        int diskTotal_row = disk_row + 2; 
+        mvprintw(diskTotal_row, 0, "Root %ld GB", total_disk);
+
+        int uptime_row = diskTotal_row + 2;
+        mvprintw(uptime_row, 25, "System uptime: %ld seconds", uptime);
 
         int count = processID(procs, 128);
         qsort(procs, count, sizeof(Process), compare_cpu);
 
-        int proc_row = disk_row + 2;
+        int proc_row = diskTotal_row + 2;
         mvprintw(proc_row, 0, " PID   CPU%%  NAME");
         for (int i = 0; i < count; i++) {
              mvprintw(proc_row + 1 + i, 0, "%5d  %5.1f  %s", procs[i].pid, procs[i].cpu, procs[i].name);
         }
 
         refresh();
-        usleep(500000);
+        usleep(1000000);
     }
 
     endwin();
