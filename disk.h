@@ -1,8 +1,8 @@
 #ifndef DISK_H
 #define DISK_H
 
-float diskUsage();
+extern float diskUsage();
 
-long diskTotal();
+extern long diskTotal();
 
 #endif

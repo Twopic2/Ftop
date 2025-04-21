@@ -74,7 +74,7 @@ void coreUsagefunc(float *usage) {
 
 
 
-float memUsage() {
+float memoryLeft() {
     FILE *fp = fopen("/proc/meminfo", "r");
     long total = 0, free = 0, buffers = 0, cached = 0;
     char label[64];
@@ -137,13 +137,17 @@ int compare_cpu(const void *a, const void *b) {
     return (diff > 0) - (diff < 0);
 }
 
+// percentage of usage
 void chart(int y, int x, const char *label, float percent) {
     int filled = (int)(BAR_WIDTH * percent / 100.0);
     mvprintw(y, x, "%s [", label);
     for (int i = 0; i < BAR_WIDTH; i++) {
-        if (i < filled) addch('=');
-        else addch(' ');
-    }
+        if (i < filled) {
+            addch('=');
+        } else {
+            addch(' ');
+        }
+    }   
     printw("] %5.1f%%", percent);
 }
 
@@ -169,7 +173,7 @@ int main() {
         mvprintw(0, 0, "Welcome to Ftop");
     
         coreUsagefunc(core_usages);
-        float mem = memUsage();
+        float mem = memoryLeft();
 
         long uptime = show_uptime();
 
@@ -200,17 +204,20 @@ int main() {
         int diskTotal_row = disk_row + 2; 
         mvprintw(diskTotal_row, 0, "Root %ld GB", total_disk);
 
-        int uptime_row = diskTotal_row + 2;
-        mvprintw(uptime_row, 25, "System uptime: %ld seconds", uptime);
+        int cache_row = diskTotal_row + 2;
+        cacheusage(cache_row, 0);
 
         int count = processID(procs, 128);
         qsort(procs, count, sizeof(Process), compare_cpu);
 
-        int proc_row = diskTotal_row + 2;
+        int proc_row = cache_row + 5;
         mvprintw(proc_row, 0, " PID   CPU%%  NAME");
         for (int i = 0; i < count; i++) {
              mvprintw(proc_row + 1 + i, 0, "%5d  %5.1f  %s", procs[i].pid, procs[i].cpu, procs[i].name);
         }
+
+        int uptime_row = proc_row;
+        mvprintw(uptime_row, 25, "System uptime: %ld seconds", uptime);
 
         refresh();
         usleep(1000000);
