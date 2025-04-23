@@ -9,7 +9,7 @@
 #include <sys/statvfs.h>
 
 #include "disk.h"
-#include "cpuinfo.c"
+#include "cpuinfo.h"
 
 #define MAX_CORES 128
 #define CORES_PER_COLUMN 10
