@@ -110,6 +110,12 @@ void cacheusage(int row, int col) {
     struct cacheinfo cache[10];
     int count = catCache(cache, 10);
 
+    if (count == 0) {
+        mvprintw(row, col, "Cache info isn't working");
+        return;
+
+    }
+
     for (int i = 0; i < count; i++) {
         for (int j = i + 1; j < count; j++) {
             if (cache[i].level > cache[j].level) {
@@ -119,9 +125,10 @@ void cacheusage(int row, int col) {
             }
         }
     }
-    
+
+    mvprintw(row, col, "CPU Cache Information:");    
     for (int i = 0; i < count; i++) {
-        mvprintw(row + i, col, "L%d Cache: %d KB", cache[i].level, cache[i].sizeKB);
+        mvprintw(row + i + 1, col, "L%d Cache: %d KB", cache[i].level, cache[i].sizeKB);
     }
 
 }
