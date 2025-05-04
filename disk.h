@@ -1,8 +1,8 @@
 #ifndef DISK_H
 #define DISK_H
 
-extern float diskUsage();
+float diskUsage(char *path);
 
-extern long diskTotal();
+long diskTotal(char *path);
 
 #endif

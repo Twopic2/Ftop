@@ -14,7 +14,7 @@
 #define MAX_CORES 128
 #define CORES_PER_COLUMN 10
 #define BAR_WIDTH 20
-
+#define PROCESS_DISPLAY 25
 typedef struct {
     int pid;
     char name[256];
@@ -28,7 +28,6 @@ typedef struct {
 
 int coreAmount = 0;
 coreStat cores[MAX_CORES];
-
 
 void amountCores() {
     FILE *fp = fopen("/proc/stat", "r");
@@ -71,8 +70,6 @@ void coreUsagefunc(float *usage) {
     }
     fclose(fp);
 }
-
-
 
 float memoryLeft() {
     FILE *fp = fopen("/proc/meminfo", "r");
@@ -128,6 +125,7 @@ int processID(Process *procs, int max) {
         procs[count].cpu = (float)(utime + stime) / sysconf(_SC_CLK_TCK);
         count++;
     }
+
     closedir(dir);
     return count;
 }
@@ -151,9 +149,35 @@ void chart(int y, int x, const char *label, float percent) {
     printw("] %5.1f%%", percent);
 }
 
+
+void processDisplay(Process *procs, int count, int scroll, int proc_row) {
+
+    mvprintw(proc_row, 0, " PID   CPU%%  NAME");
+
+    int display_count;
+
+    if (count < PROCESS_DISPLAY) {
+        display_count = count;
+    }
+
+    if (count >= PROCESS_DISPLAY) {
+        display_count = PROCESS_DISPLAY;
+
+    }
+
+    for (int i = 0; i < display_count && (i + scroll) < count; i++) {
+        int id = i + scroll;
+        mvprintw(proc_row + 1 + i, 0, "%5d  %5.1f  %s", procs[id].pid, procs[id].cpu, procs[id].name);
+    }
+
+}
+
 int main() {
     initscr();
     noecho();
+    keypad(stdscr, TRUE);
+    cbreak();
+    timeout(1000);
 
     curs_set(FALSE);
 
@@ -161,14 +185,11 @@ int main() {
     Process procs[256];   
     float core_usages[MAX_CORES]; 
 
+    int scroll = 0;
+    int count = 0;
+
     while (1) {
         clear();
-        
-        start_color();
-        init_pair(1, COLOR_YELLOW, COLOR_GREEN);
-        init_pair(2, COLOR_CYAN, COLOR_BLUE);
-        init_pair(3, COLOR_BLACK, COLOR_WHITE);
-        init_pair(4, COLOR_RED, COLOR_MAGENTA); 
 
         mvprintw(0, 0, "Welcome to Ftop");
     
@@ -182,10 +203,11 @@ int main() {
         long total_disk = diskTotal("/");
 
         int base_row = 2;
+
         for (int i = 0; i < coreAmount; i++) {
             int col = i / CORES_PER_COLUMN;
             int row = i % CORES_PER_COLUMN;
-            int x = col * 30;
+            int x = col * 50;
             int y = base_row + row;
 
             char label[16];
@@ -194,9 +216,7 @@ int main() {
         }
 
         int mem_row = base_row + CORES_PER_COLUMN + 1;
-        attron(COLOR_PAIR(1));
         chart(mem_row, 0, "MEM", mem);
-        attroff(COLOR_PAIR(1));
 
         int disk_row = mem_row + 4;
         chart(disk_row, 0, "Disk Usage", disk);
@@ -207,13 +227,24 @@ int main() {
         int cache_row = diskTotal_row + 2;
         cacheusage(cache_row, 0);
 
-        int count = processID(procs, 128);
+        int count = processID(procs, 256);
         qsort(procs, count, sizeof(Process), compare_cpu);
 
         int proc_row = cache_row + 5;
-        mvprintw(proc_row, 0, " PID   CPU%%  NAME");
-        for (int i = 0; i < count; i++) {
-             mvprintw(proc_row + 1 + i, 0, "%5d  %5.1f  %s", procs[i].pid, procs[i].cpu, procs[i].name);
+        processDisplay(procs, count, scroll, proc_row);
+
+        int ch = getch();
+
+        switch(ch) {
+            case KEY_UP:
+                if (scroll > 0) {
+                    scroll--;
+                }
+            break;
+            case KEY_DOWN:
+                if (scroll + PROCESS_DISPLAY < count) {
+                    scroll++;
+                }
         }
 
         int uptime_row = proc_row;
