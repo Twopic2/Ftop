@@ -152,7 +152,7 @@ void chart(int y, int x, const char *label, float percent) {
 
 void processDisplay(Process *procs, int count, int scroll, int proc_row) {
 
-    mvprintw(proc_row, 0, " PID   CPU%%  NAME");
+    mvprintw(proc_row, 0, " PID   CPU  NAME");
 
     int display_count;
 
