@@ -17,6 +17,13 @@ struct cacheinfo {
 
 };
 
+struct isaInfo {
+
+    char isaSet[32]; 
+    char description[];
+
+};
+
 long show_uptime() {
 
     sysinfo(&info);
@@ -132,4 +139,60 @@ void cacheusage(int row, int col) {
     }
 
 }
+
+int catISA(struct isaInfo *isaArray, int max_entries) {
+
+    FILE *fp = fopen("/proc/cpuinfo", "r");
+
+    char line[512];
+    int count = 0;
+
+    while(fgets(line, sizeof(line), fp)) {
+
+        if (strncmp(line, "flags", 5) == 0) {
+            char *flags = strchr(line, ':');
+             if (flags && *(flags + 1)) {
+                flags += 2; 
+                flags[strcspn(flags, "\n")] = 0;
+
+                char *token = strtok(flags, " ");
+                while (token && count < max_entries) {
+                    strncpy(isaArray[count].isaSet, token, sizeof(isaArray[count].isaSet) - 1);
+                    isaArray[count].isaSet[sizeof(isaArray[count].isaSet) - 1] = '\0';
+                    count++;
+                    token = strtok(NULL, " ");
+                }
+            }
+                break;
+        }
+
+        }
+    
+        fclose(fp);
+        return count;
+        
+ }
+
+ void displayISAInfo(int row, int col) {
+
+    struct isaInfo instructionSet[256];
+    int count = catISA(instructionSet, 256);
+
+    
+    if (count == 0) {
+        mvprintw(row, col, "ISA info isn't working");
+        return;
+
+    }
+
+    mvprintw(row, col, "ISA Extensions:");
+    int colums = 4;
+
+     for (int i = 0; i < count; i++) {
+        mvprintw(row + 1 + i / colums, col + (i % colums) * 15, "%s", instructionSet[i].isaSet);
+    }
+
+ }
+    
+
 

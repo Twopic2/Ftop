@@ -7,6 +7,7 @@
 #include <ctype.h>
 #include <time.h>
 #include <sys/statvfs.h>
+#include <signal.h>
 
 #include "disk.h"
 #include "cpuinfo.h"
@@ -15,6 +16,7 @@
 #define CORES_PER_COLUMN 10
 #define BAR_WIDTH 20
 #define PROCESS_DISPLAY 25
+
 typedef struct {
     int pid;
     char name[256];
@@ -176,6 +178,7 @@ int main() {
     initscr();
     noecho();
     keypad(stdscr, TRUE);
+    nodelay(stdscr, FALSE);
     cbreak();
     timeout(1000);
 
@@ -218,7 +221,7 @@ int main() {
         int mem_row = base_row + CORES_PER_COLUMN + 1;
         chart(mem_row, 0, "MEM", mem);
 
-        int disk_row = mem_row + 4;
+        int disk_row = mem_row + 2;
         chart(disk_row, 0, "Disk Usage", disk);
 
         int diskTotal_row = disk_row + 2; 
@@ -232,6 +235,9 @@ int main() {
 
         int proc_row = cache_row + 5;
         processDisplay(procs, count, scroll, proc_row);
+
+        int isa_row = proc_row ;
+        displayISAInfo(isa_row, 100);
 
         int ch = getch();
 
