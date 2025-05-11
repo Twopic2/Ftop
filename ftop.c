@@ -8,6 +8,7 @@
 #include <time.h>
 #include <sys/statvfs.h>
 #include <signal.h>
+#include <locale.h>
 
 #include "disk.h"
 #include "cpuinfo.h"
@@ -60,8 +61,7 @@ void coreUsagefunc(float *usage) {
     while (fgets(buf, sizeof(buf), fp)) {
         if (strncmp(buf, "cpu", 3) == 0 && isdigit(buf[3])) {
             long user, nice, system, idle, iowait, irq, softirq, steal;
-            sscanf(buf, "cpu%*d %ld %ld %ld %ld %ld %ld %ld %ld",
-                   &user, &nice, &system, &idle, &iowait, &irq, &softirq, &steal);
+            sscanf(buf, "cpu%*d %ld %ld %ld %ld %ld %ld %ld %ld", &user, &nice, &system, &idle, &iowait, &irq, &softirq, &steal);
 
             long idle_time = idle + iowait;
             long total_time = user + nice + system + idle + iowait + irq + softirq + steal;
@@ -167,7 +167,7 @@ void chart(int y, int x, const char *label, float percent) {
 
 void processDisplay(Process *procs, int count, int scroll, int proc_row) {
 
-    mvprintw(proc_row, 0, " PID   CPU  NAME");
+    mvprintw(proc_row, 0, " PID   CPU  COMMAND");
 
     int display_count;
 
