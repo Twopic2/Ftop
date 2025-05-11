@@ -193,7 +193,7 @@ int main() {
     nodelay(stdscr, FALSE);
     cbreak();
     timeout(1000);
-
+    mousemask(ALL_MOUSE_EVENTS | REPORT_MOUSE_POSITION, NULL);
     curs_set(FALSE);
 
     amountCores();
