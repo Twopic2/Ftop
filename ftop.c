@@ -28,6 +28,12 @@ typedef struct {
     float prevTotal;
 } coreStat;
 
+typedef struct {
+    float totalGB;
+    float usedGB;
+    float percentage;
+} MemoryStats;
+
 int coreAmount = 0;
 coreStat cores[MAX_CORES];
 
@@ -73,9 +79,11 @@ void coreUsagefunc(float *usage) {
     fclose(fp);
 }
 
-float memoryLeft() {
+MemoryStats memStats() {
+    MemoryStats stats = {0.0f, 0.0f, 0.0f};
     FILE *fp = fopen("/proc/meminfo", "r");
-    long total = 0, free = 0, buffers = 0, cached = 0;
+    
+    long total = 0, free = 0, buffers = 0, cached = 0, swap = 0;
     char label[64];
     long value;
 
@@ -89,11 +97,17 @@ float memoryLeft() {
         } else if (strcmp(label, "Cached:") == 0) {
             cached = value;
         }
-    
     }
-    fclose(fp);
+    fclose(fp); 
+
     long used = total - free - buffers - cached;
-    return (100.0 * used) / total;    
+    
+    stats.totalGB = (float)total / 1048576.0;
+    stats.usedGB = (float)used / 1048576.0;
+
+    stats.percentage = (100.f * used) / total;
+ 
+    return stats;
 }
 
 int processID(Process *procs, int max) {
@@ -151,7 +165,6 @@ void chart(int y, int x, const char *label, float percent) {
     printw("] %5.1f%%", percent);
 }
 
-
 void processDisplay(Process *procs, int count, int scroll, int proc_row) {
 
     mvprintw(proc_row, 0, " PID   CPU  NAME");
@@ -171,7 +184,6 @@ void processDisplay(Process *procs, int count, int scroll, int proc_row) {
         int id = i + scroll;
         mvprintw(proc_row + 1 + i, 0, "%5d  %5.1f  %s", procs[id].pid, procs[id].cpu, procs[id].name);
     }
-
 }
 
 int main() {
@@ -197,7 +209,8 @@ int main() {
         mvprintw(0, 0, "Welcome to Ftop");
     
         coreUsagefunc(core_usages);
-        float mem = memoryLeft();
+
+        MemoryStats mem_stats = memStats();
 
         long uptime = show_uptime();
 
@@ -219,7 +232,8 @@ int main() {
         }
 
         int mem_row = base_row + CORES_PER_COLUMN + 1;
-        chart(mem_row, 0, "MEM", mem);
+        chart(mem_row, 0, "Memory", mem_stats.percentage);
+        mvprintw(mem_row, 50 , "%.2f GB / %.2f GB", mem_stats.usedGB, mem_stats.totalGB);
 
         int disk_row = mem_row + 2;
         chart(disk_row, 0, "Disk Usage", disk);

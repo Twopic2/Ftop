@@ -9,31 +9,22 @@
 struct sysinfo info; 
 
 struct cacheinfo {
-
     int level;
     int sizeKB;
     int id; 
     char type[32];   
-
 };
 
 struct isaInfo {
-
     char isaSet[32]; 
-    char description[];
-
 };
 
 long show_uptime() {
-
     sysinfo(&info);
-
     return info.uptime;
-
 }
 
 int catCache(struct cacheinfo *cacheArray, int max_entries) {
-
     struct dirent *entry;
 
     // I didn't know this but linux organizes cache by index such index0->Intruction. 
@@ -60,12 +51,12 @@ int catCache(struct cacheinfo *cacheArray, int max_entries) {
             if (flevel) {
                 fclose(flevel);
             }
+
             if (fsize) {
                 fclose(fsize);
             }
 
             continue;
-
         }
                 
         int level = 0;
@@ -107,9 +98,7 @@ int catCache(struct cacheinfo *cacheArray, int max_entries) {
     }
 
     closedir(dir);
-
     return count;
-
 }
 
 void cacheusage(int row, int col) {
@@ -120,7 +109,6 @@ void cacheusage(int row, int col) {
     if (count == 0) {
         mvprintw(row, col, "Cache info isn't working");
         return;
-
     }
 
     for (int i = 0; i < count; i++) {
@@ -164,16 +152,16 @@ int catISA(struct isaInfo *isaArray, int max_entries) {
                 }
             }
                 break;
-        }
+          }
 
-        }
-    
+       }
+
         fclose(fp);
-        return count;
-        
+        return count;        
+
  }
 
- void displayISAInfo(int row, int col) {
+void displayISAInfo(int row, int col) {
 
     struct isaInfo instructionSet[256];
     int count = catISA(instructionSet, 256);
@@ -182,7 +170,6 @@ int catISA(struct isaInfo *isaArray, int max_entries) {
     if (count == 0) {
         mvprintw(row, col, "ISA info isn't working");
         return;
-
     }
 
     mvprintw(row, col, "ISA Extensions:");
@@ -191,8 +178,10 @@ int catISA(struct isaInfo *isaArray, int max_entries) {
      for (int i = 0; i < count; i++) {
         mvprintw(row + 1 + i / colums, col + (i % colums) * 15, "%s", instructionSet[i].isaSet);
     }
+}
 
- }
+void groupISA() {
     
 
 
+}
