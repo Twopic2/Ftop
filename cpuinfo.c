@@ -179,9 +179,3 @@ void displayISAInfo(int row, int col) {
         mvprintw(row + 1 + i / colums, col + (i % colums) * 15, "%s", instructionSet[i].isaSet);
     }
 }
-
-void groupISA() {
-    
-
-
-}

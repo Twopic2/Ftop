@@ -22,6 +22,7 @@ typedef struct {
     int pid;
     char name[256];
     float cpu;
+    float mem;
 } Process;
 
 typedef struct {
