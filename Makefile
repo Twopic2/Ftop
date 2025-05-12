@@ -4,3 +4,6 @@ ftop: ftop.c
 
 clean:
 	rm -rf ftop
+
+run:
+	./ftop
