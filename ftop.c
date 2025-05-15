@@ -13,6 +13,7 @@
 #include "disk.h"
 #include "cpuinfo.h"
 
+#define PREVENT_OVERFLOW 100000
 #define MAX_CORES 128
 #define CORES_PER_COLUMN 10
 #define BAR_WIDTH 20
@@ -56,7 +57,7 @@ void amountCores() {
 
 void coreUsagefunc(float *usage) {
     FILE *fp = fopen("/proc/stat", "r");
-    char buf[999];
+    char buf[1024];
     int core = 0;
 
     while (fgets(buf, sizeof(buf), fp)) {
@@ -83,8 +84,19 @@ void coreUsagefunc(float *usage) {
 MemoryStats memStats() {
     MemoryStats stats = {0.0f, 0.0f, 0.0f};
     FILE *fp = fopen("/proc/meminfo", "r");
+
+    if (!fp) {
+        refresh();
+        return stats;
+    }
     
-    long total = 0, free = 0, buffers = 0, cached = 0, swap = 0;
+    long total = 0;
+    long free = 0;
+    long buffers = 0;
+    long cached = 0;
+    /* 
+    Will used in future implemtnation long swap = 0;
+     */
     char label[64];
     long value;
 
@@ -112,48 +124,171 @@ MemoryStats memStats() {
 }
 
 int processID(Process *procs, int max) {
-    DIR *dir = opendir("/proc");
+    DIR *dir = opendir("/proc"); 
     struct dirent *entry;
     int count = 0;
 
+    int attempted = 0;
+    int nullChecker = 0;
+
     while ((entry = readdir(dir)) != NULL && count < max) {
-        if (!isdigit(entry->d_name[0])) continue;
-
-        int pid = atoi(entry->d_name);
-        char location[256];
-        snprintf(location, sizeof(location), "/proc/%d/stat", pid);
-        FILE *fp = fopen(location, "r");
-
-        int dummy;
-        char name[256];
-        char state;
-        long utime, stime;
-        
-        fscanf(fp, "%d (%[^)]s) %c", &dummy, name, &state);
-        
-        for (int i = 0; i < 11; i++) {
-            fscanf(fp, "%*s");
+        if (!isdigit(entry->d_name[0])) {
+            continue;
         }
-        fscanf(fp, "%ld %ld", &utime, &stime);
-        fclose(fp);
 
+        attempted++;
+        int pid = atoi(entry->d_name);
+        
+        char cpu_path[PREVENT_OVERFLOW];
+        char cmdline_path[PREVENT_OVERFLOW];
+        char mem_path[PREVENT_OVERFLOW];
+        
+        snprintf(cpu_path, sizeof(cpu_path), "/proc/%d/stat", pid);
+        snprintf(cmdline_path, sizeof(cmdline_path), "/proc/%d/cmdline", pid);
+        snprintf(mem_path, sizeof(mem_path), "/proc/%d/statm", pid);
+        
+        FILE *cpu_fp = fopen(cpu_path, "r");
+        FILE *mem_fp = fopen(mem_path, "r");
+
+        if (!cpu_fp) {
+            nullChecker++;
+            continue;
+        }
+
+        if (!mem_fp) {
+            nullChecker++;
+            continue;
+        }
+
+        long total_mem = 0;
+        long proc_memusage = 0;
+        long utime = 0;
+        long stime = 0;
+
+        char stat_line[1024];
+
+        if (!fgets(stat_line, sizeof(stat_line), cpu_fp)) {
+            fclose(cpu_fp);
+            nullChecker++;
+            continue;
+        }
+        fclose(cpu_fp);
+       
+        char *name_start = strchr(stat_line, '(');
+        char *name_end = strrchr(stat_line, ')');
+        if (!name_start || !name_end || name_start >= name_end) {
+            nullChecker++;
+            continue;
+        }
+        
+        char name[256];
+        int name_len = name_end - name_start - 1;
+
+        if (name_len < 0) {
+            name_len = 0;
+        } else if (name_len >= 256) {
+            name_len = 255;
+        }
+
+        strncpy(name, name_start + 1, name_len);
+        name[name_len] = '\0';
+        
+        FILE *cmd_fp = fopen(cmdline_path, "r");
+        if (cmd_fp) {
+            char cmdline[PREVENT_OVERFLOW];
+            if (fgets(cmdline, sizeof(cmdline), cmd_fp)) {
+                if (strlen(cmdline) > 0) {
+                    char *base = strrchr(cmdline, '/');
+                    if (base) {
+                        strncpy(name, base + 1, 255);
+                    } else {
+                        strncpy(name, cmdline, 255);
+                    }
+                    
+                    name[255] = '\0';
+                    
+                    for (char *p = name; *p; p++) {
+                        if (*p < ' ') {
+                            *p = ' ';
+                        }
+                    }
+                }
+            }
+            fclose(cmd_fp);
+        }
+        
+        char *stat_ptr = name_end + 2; 
+        
+        for (int i = 0; i < 12; i++) {
+            while (*stat_ptr && *stat_ptr != ' ') {
+                stat_ptr++;
+            }
+            while (*stat_ptr && *stat_ptr == ' ') {
+                stat_ptr++;
+            }
+
+            if (!stat_ptr || *stat_ptr == '\0') {
+                break;
+            }
+        }
+        
+        if (sscanf(stat_ptr, "%ld %ld", &utime, &stime) != 2) {
+            nullChecker++;
+            continue;
+        }
+      
+        if (mem_fp) {
+
+            if (fscanf(mem_fp, "%ld %ld", &total_mem, &proc_memusage) != 2) {
+                proc_memusage = 0;  
+            }
+            fclose(mem_fp);
+        }
+        
         procs[count].pid = pid;
         strncpy(procs[count].name, name, 255);
+        procs[count].name[255] = '\0';
+        
+        long page_size = sysconf(_SC_PAGESIZE);
+        float mem_usage = (proc_memusage * page_size) / (1024.0 * 1024.0);
+        
         procs[count].cpu = (float)(utime + stime) / sysconf(_SC_CLK_TCK);
+        procs[count].mem = mem_usage;
+        
         count++;
     }
-
-    closedir(dir);
+    
+    closedir(dir); 
     return count;
 }
 
-int compare_cpu(const void *a, const void *b) {
-    float diff = ((Process *)b)->cpu - ((Process *)a)->cpu;
-    return (diff > 0) - (diff < 0);
+int compareCpu(const void *a, const void *b) {
+    const Process *p1 = (const Process *)a;
+    const Process *p2 = (const Process *)b;
+    
+    if (p2 -> cpu > p1 -> cpu) {
+        return 1;
+    } else if (p2 -> cpu < p1 -> cpu) {
+        return -1;
+    }
+
+    return 0;
 }
 
-// percentage of usage
-void chart(int y, int x, const char *label, float percent) {
+int compareMem(const void *a, const void *b) {
+    const Process *p1 = (const Process *)a;
+    const Process *p2 = (const Process *)b;
+    
+    if (p2 -> mem > p1 -> mem) {
+        return 1;
+    } else if (p2 -> mem < p1 -> mem) {
+        return -1;
+    }
+
+    return 0;
+}
+
+void bargraph(int y, int x, const char *label, float percent) {
     int filled = (int)(BAR_WIDTH * percent / 100.0);
     mvprintw(y, x, "%s [", label);
     for (int i = 0; i < BAR_WIDTH; i++) {
@@ -167,27 +302,17 @@ void chart(int y, int x, const char *label, float percent) {
 }
 
 void processDisplay(Process *procs, int count, int scroll, int proc_row) {
+    mvprintw(proc_row, 0, " PID    CPU    MEM    COMMAND"); 
 
-    mvprintw(proc_row, 0, " PID   CPU  COMMAND");
-
-    int display_count;
-
-    if (count < PROCESS_DISPLAY) {
-        display_count = count;
-    }
-
-    if (count >= PROCESS_DISPLAY) {
-        display_count = PROCESS_DISPLAY;
-
-    }
+    int display_count = (count < PROCESS_DISPLAY) ? count : PROCESS_DISPLAY;
 
     for (int i = 0; i < display_count && (i + scroll) < count; i++) {
         int id = i + scroll;
-        mvprintw(proc_row + 1 + i, 0, "%5d  %5.1f  %s", procs[id].pid, procs[id].cpu, procs[id].name);
+        mvprintw(proc_row + 1 + i, 0, "%5d  %5.1f  %7.1f  %s", procs[id].pid, procs[id].cpu, procs[id].mem, procs[id].name);
     }
 }
 
-int main() {
+int main() {    
     initscr();
     noecho();
     keypad(stdscr, TRUE);
@@ -198,7 +323,7 @@ int main() {
     curs_set(FALSE);
 
     amountCores();
-    Process procs[256];   
+    Process procs[10000];   
     float core_usages[MAX_CORES]; 
 
     int scroll = 0;
@@ -207,19 +332,18 @@ int main() {
     while (1) {
         clear();
 
-        mvprintw(0, 0, "Welcome to Ftop");
+        mvprintw(0, 0, "Welcome to Ftop!");
     
         coreUsagefunc(core_usages);
 
         MemoryStats mem_stats = memStats();
 
-        long uptime = show_uptime();
+//        long uptime = show_uptime();
 
         float disk = diskUsage("/");
-        
         long total_disk = diskTotal("/");
 
-        int base_row = 2;
+        int base_row = 2;  
 
         for (int i = 0; i < coreAmount; i++) {
             int col = i / CORES_PER_COLUMN;
@@ -229,31 +353,37 @@ int main() {
 
             char label[16];
             snprintf(label, sizeof(label), "CPU %02d", i);
-            chart(y, x, label, core_usages[i]);
+            bargraph(y, x, label, core_usages[i]);
         }
 
         int mem_row = base_row + CORES_PER_COLUMN + 1;
-        chart(mem_row, 0, "Memory", mem_stats.percentage);
+        bargraph(mem_row, 0, "Memory", mem_stats.percentage);
         mvprintw(mem_row, 50 , "%.2f GB / %.2f GB", mem_stats.usedGB, mem_stats.totalGB);
 
         int disk_row = mem_row + 2;
-        chart(disk_row, 0, "Disk Usage", disk);
+        bargraph(disk_row, 0, "Disk Usage", disk);
 
         int diskTotal_row = disk_row + 2; 
         mvprintw(diskTotal_row, 0, "Root %ld GB", total_disk);
 
         int cache_row = diskTotal_row + 2;
+
+
         cacheusage(cache_row, 0);
 
-        int count = processID(procs, 256);
-        qsort(procs, count, sizeof(Process), compare_cpu);
-
+        count = processID(procs, 10000);
+        
         int proc_row = cache_row + 5;
+        qsort(procs, count, sizeof(Process), compareMem);
         processDisplay(procs, count, scroll, proc_row);
-
-        int isa_row = proc_row ;
-        displayISAInfo(isa_row, 100);
-
+        
+        /* 
+        int isa_row = proc_row + PROCESS_DISPLAY + 2;
+        displayISAInfo(isa_row, 100); 
+        */
+        
+        refresh();
+        
         int ch = getch();
 
         switch(ch) {
@@ -261,21 +391,15 @@ int main() {
                 if (scroll > 0) {
                     scroll--;
                 }
-            break;
+                break;
             case KEY_DOWN:
                 if (scroll + PROCESS_DISPLAY < count) {
                     scroll++;
                 }
+                break;
         }
-
-        int uptime_row = proc_row;
-        mvprintw(uptime_row, 25, "System uptime: %ld seconds", uptime);
-
-        refresh();
-        usleep(1000000);
     }
 
     endwin();
-    //End Ftop
     return 0;
 }

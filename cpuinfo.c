@@ -63,7 +63,6 @@ int catCache(struct cacheinfo *cacheArray, int max_entries) {
         int sizeKB = 0;
 
         char size_str[256] = {0};
-        char type_str[256] = {0};
 
         if (fscanf(flevel, "%d", &level) != 1) {
             fclose(flevel);
@@ -179,3 +178,8 @@ void displayISAInfo(int row, int col) {
         mvprintw(row + 1 + i / colums, col + (i % colums) * 15, "%s", instructionSet[i].isaSet);
     }
 }
+
+/* void cpuTemp() {
+
+
+} */
