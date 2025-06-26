@@ -8,6 +8,11 @@
 
 struct sysinfo info; 
 
+struct ClockSpeed {
+    float mhz;
+
+};
+
 struct cacheinfo {
     int level;
     int sizeKB;
@@ -27,35 +32,28 @@ long show_uptime() {
 int catCache(struct cacheinfo *cacheArray, int max_entries) {
     struct dirent *entry;
 
-    // I didn't know this but linux organizes cache by index such index0->Intruction. 
     const char *cache_files = "/sys/devices/system/cpu/cpu0/cache/";
-
     DIR *dir = opendir(cache_files);
 
     int count = 0;
-
     while ((entry = readdir(dir)) != NULL) {
 
         char level_path[512];
         char size_path[512];
 
-        FILE *flevel = fopen(level_path, "r");
-        FILE *fsize = fopen(size_path, "r");
-      
-
         snprintf(level_path, sizeof(level_path), "%s%s/level", cache_files, entry->d_name);
         snprintf(size_path, sizeof(size_path), "%s%s/size", cache_files, entry->d_name);
+
+        FILE *flevel = fopen(level_path, "r");
+        FILE *fsize = fopen(size_path, "r");
         
         if (!flevel || !fsize) {
-            
             if (flevel) {
                 fclose(flevel);
             }
-
             if (fsize) {
                 fclose(fsize);
             }
-
             continue;
         }
                 
@@ -93,7 +91,6 @@ int catCache(struct cacheinfo *cacheArray, int max_entries) {
 
         fclose(flevel);
         fclose(fsize);
-
     }
 
     closedir(dir);
@@ -101,7 +98,6 @@ int catCache(struct cacheinfo *cacheArray, int max_entries) {
 }
 
 void cacheusage(int row, int col) {
-
     struct cacheinfo cache[10];
     int count = catCache(cache, 10);
 
@@ -124,11 +120,9 @@ void cacheusage(int row, int col) {
     for (int i = 0; i < count; i++) {
         mvprintw(row + i + 1, col, "L%d Cache: %d KB", cache[i].level, cache[i].sizeKB);
     }
-
 }
 
 int catISA(struct isaInfo *isaArray, int max_entries) {
-
     FILE *fp = fopen("/proc/cpuinfo", "r");
 
     char line[512];
@@ -157,14 +151,11 @@ int catISA(struct isaInfo *isaArray, int max_entries) {
 
         fclose(fp);
         return count;        
-
  }
 
 void displayISAInfo(int row, int col) {
-
     struct isaInfo instructionSet[256];
     int count = catISA(instructionSet, 256);
-
     
     if (count == 0) {
         mvprintw(row, col, "ISA info isn't working");

@@ -3,7 +3,6 @@
 
 #include <sys/sysinfo.h>
 
-
 struct cacheinfo {
     int level;
     int sizeKB;
