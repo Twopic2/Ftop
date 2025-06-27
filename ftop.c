@@ -55,7 +55,7 @@ void amountCores() {
     fclose(fp);
 }
 
-void coreUsagefunc(float *usage) {
+void coreUsage(float *usage) {
     FILE *fp = fopen("/proc/stat", "r");
     char buf[1024];
     int core = 0;
@@ -301,6 +301,7 @@ void bargraph(int y, int x, const char *label, float percent) {
     printw("] %5.1f%%", percent);
 }
 
+
 void processDisplay(Process *procs, int count, int scroll, int proc_row) {
     mvprintw(proc_row, 0, " PID    CPU    MEM    COMMAND"); 
 
@@ -326,33 +327,49 @@ int main() {
     Process procs[10000];   
     float core_usages[MAX_CORES]; 
 
+    struct ClockInfo clocks[MAX_CORES];
+    int freqCount = 0;
+
     int scroll = 0;
     int count = 0;
 
     while (1) {
         clear();
-
         mvprintw(0, 0, "Welcome to Ftop!");
-    
-        coreUsagefunc(core_usages);
-
-        MemoryStats mem_stats = memStats();
-
+        coreUsage(core_usages);
+        MemoryStats mem_stats = memStats();      
+        freqCount = catFrequency(clocks, coreAmount);
 //        long uptime = show_uptime();
 
         float disk = diskUsage("/");
         long total_disk = diskTotal("/");
 
-        int base_row = 2;  
-
+      
+        int base_row = 2; 
+         
         for (int i = 0; i < coreAmount; i++) {
             int col = i / CORES_PER_COLUMN;
             int row = i % CORES_PER_COLUMN;
-            int x = col * 50;
-            int y = base_row + row;
-
-            char label[16];
-            snprintf(label, sizeof(label), "CPU %02d", i);
+            int x = col * 70; 
+            int y = base_row + row;        
+            float freq_mhz = 0.0f;
+    
+            for (int j = 0; j < freqCount; j++) {
+                if (clocks[j].core_id == i) {
+                    freq_mhz = clocks[j].MHz;
+                    break;
+                }
+            }
+            
+            char label[32];
+            if (freq_mhz >= 1000.0f) {
+                snprintf(label, sizeof(label), "CPU %02d %.2fGHz", i, freq_mhz/1000.0f);
+            } else if (freq_mhz > 0.0f) {
+                snprintf(label, sizeof(label), "CPU %02d %.0fMHz", i, freq_mhz);
+            } else {
+                snprintf(label, sizeof(label), "CPU %02d", i);
+            }
+    
             bargraph(y, x, label, core_usages[i]);
         }
 

@@ -8,9 +8,10 @@
 
 struct sysinfo info; 
 
-struct ClockSpeed {
-    float mhz;
-
+struct ClockInfo {
+    float MHz;
+    char speed[32];
+    int core_id;
 };
 
 struct cacheinfo {
@@ -170,7 +171,53 @@ void displayISAInfo(int row, int col) {
     }
 }
 
-/* void cpuTemp() {
+int catFrequency(struct ClockInfo *clocks, int max) {
+    int count = 0; 
 
-
-} */
+    FILE *id = fopen("/sys/devices/system/cpu/cpu%d/cpufreq/scaling_cur_freq", "r");
+    
+    for (int i = 0; i < max; i++) {
+        char freqPath[256];
+        snprintf(freqPath, sizeof(freqPath), 
+                "/sys/devices/system/cpu/cpu%d/cpufreq/scaling_cur_freq", i);
+        FILE *fp = fopen(freqPath, "r");
+        if (fp != NULL) {
+            long freqs = 0;
+            if (fscanf(fp, "%ld", &freqs) == 1) {
+                clocks[count].MHz = freqs / 1000.0; 
+                clocks[count].core_id = i;
+                snprintf(clocks[count].speed, sizeof(clocks[count].speed), 
+                        "%.0f MHz", clocks[count].MHz);
+                count++;
+            }
+            fclose(fp);
+        }
+    }
+    
+    if (!id) {
+        fclose(id);
+        FILE *fp2 = fopen("/proc/cpuinfo", "r");
+        if (fp2 != NULL) {
+            char line[512];
+            
+            while (fgets(line, sizeof(line), fp2) && count < max) {
+                if (strncmp(line, "cpu MHz", 7) == 0) {
+                    char *colon = strchr(line, ':');
+                    if (colon) {
+                        float cpu_mhz = 0.0f;
+                        sscanf(colon + 1, "%f", &cpu_mhz);
+                        
+                        clocks[count].MHz = cpu_mhz;
+                        clocks[count].core_id = count; 
+                        snprintf(clocks[count].speed, sizeof(clocks[count].speed), 
+                                "%.0f MHz", cpu_mhz);
+                        count++;
+                    }
+                }
+            }
+            fclose(fp2);
+        }
+    }
+    fclose(id);
+    return count;
+}
