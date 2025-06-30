@@ -173,8 +173,7 @@ void displayISAInfo(int row, int col) {
 
 int catFrequency(struct ClockInfo *clocks, int max) {
     int count = 0; 
-
-    FILE *id = fopen("/sys/devices/system/cpu/cpu%d/cpufreq/scaling_cur_freq", "r");
+    FILE *id = fopen("/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq", "r");
     
     for (int i = 0; i < max; i++) {
         char freqPath[256];
@@ -195,7 +194,6 @@ int catFrequency(struct ClockInfo *clocks, int max) {
     }
     
     if (!id) {
-        fclose(id);
         FILE *fp2 = fopen("/proc/cpuinfo", "r");
         if (fp2 != NULL) {
             char line[512];
@@ -218,6 +216,6 @@ int catFrequency(struct ClockInfo *clocks, int max) {
             fclose(fp2);
         }
     }
-    fclose(id);
     return count;
 }
+
