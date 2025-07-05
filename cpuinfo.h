@@ -1,8 +1,9 @@
 #ifndef CPUINFO_H
 #define CPUINFO_H
 
+#ifdef __linux__
 #include <sys/sysinfo.h>
-
+#endif
 struct cacheinfo {
     int level;
     int sizeKB;
@@ -10,10 +11,8 @@ struct cacheinfo {
     char type[32]; 
 };
 struct isaInfo {
-
     char isaSet[32]; 
     char description[];
-
 };
 
 struct ClockInfo {

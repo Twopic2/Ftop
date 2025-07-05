@@ -10,7 +10,6 @@ struct statvfs stat;
 //printf("  Usage: %.2f%%\n", used_percent);
 
 float diskUsage(char *path) {
-
     if (statvfs(path, &stat) != 0) {
         perror("statvfs failed");
     }
@@ -18,14 +17,10 @@ float diskUsage(char *path) {
     unsigned long total = stat.f_blocks * stat.f_frsize;
     unsigned long free = stat.f_bfree * stat.f_frsize;
     unsigned long used = total - free;
-
     return (100.0 * used) / total;
 }
 
 long diskTotal(char *path) {
-   
     unsigned long total = stat.f_blocks * stat.f_frsize;
-
     return total / 1e9;
-
 }  

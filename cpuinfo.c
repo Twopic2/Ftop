@@ -1,28 +1,20 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/sysinfo.h>
 #include <string.h>
 #include <dirent.h>
 #include <ctype.h>
 #include <ncurses.h>
 
+#include "cpuinfo.h"
+
+#ifdef __linux__
 struct sysinfo info; 
+#endif
 
 struct ClockInfo {
     float MHz;
     char speed[32];
     int core_id;
-};
-
-struct cacheinfo {
-    int level;
-    int sizeKB;
-    int id; 
-    char type[32];   
-};
-
-struct isaInfo {
-    char isaSet[32]; 
 };
 
 long show_uptime() {
@@ -130,7 +122,6 @@ int catISA(struct isaInfo *isaArray, int max_entries) {
     int count = 0;
 
     while(fgets(line, sizeof(line), fp)) {
-
         if (strncmp(line, "flags", 5) == 0) {
             char *flags = strchr(line, ':');
              if (flags && *(flags + 1)) {
@@ -145,14 +136,12 @@ int catISA(struct isaInfo *isaArray, int max_entries) {
                     token = strtok(NULL, " ");
                 }
             }
-                break;
-          }
-
-       }
-
+            break;
+        }
+    }
         fclose(fp);
         return count;        
- }
+}
 
 void displayISAInfo(int row, int col) {
     struct isaInfo instructionSet[256];
@@ -218,4 +207,3 @@ int catFrequency(struct ClockInfo *clocks, int max) {
     }
     return count;
 }
-

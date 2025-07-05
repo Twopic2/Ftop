@@ -15,4 +15,4 @@ GDB:
 	$(CC) -o ftop $(CFLAGS) $(DEGUG) ftop.c disk.c cpuinfo.c -lncurses
 
 start:
-	gdb ./ftop
+	cgdb ./ftop

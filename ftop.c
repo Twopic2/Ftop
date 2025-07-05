@@ -12,25 +12,13 @@
 
 #include "disk.h"
 #include "cpuinfo.h"
+#include "memalloc.h"
 
 #define PREVENT_OVERFLOW 100000
 #define MAX_CORES 128
 #define CORES_PER_COLUMN 10
 #define BAR_WIDTH 20
 #define PROCESS_DISPLAY 25
-
-typedef struct {
-    int pid;
-    char name[256];
-    float cpu;
-    float mem;
-} Process;
-
-typedef struct {
-    float prevIdle;
-    float prevTotal;
-} coreStat;
-
 typedef struct {
     float totalGB;
     float usedGB;
