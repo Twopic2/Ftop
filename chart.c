@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <ncurses.h>
 
+#define BAR_WIDTH 20
+
 typedef struct {
     int* values;
     int width;
@@ -52,4 +54,17 @@ void displaySineway(int y_pos, int x_pos, const graphSinwave* gh, const char* la
         
         mvaddch(y_pos + y_offset, x_pos + i + 1, '*');
     }
+}
+
+void bargraph(int y, int x, const char *label, float percent) {
+    int filled = (int)(BAR_WIDTH * percent / 100.0);
+    mvprintw(y, x, "%s [", label);
+    for (int i = 0; i < BAR_WIDTH; i++) {
+        if (i < filled) {
+            addch('=');
+        } else {
+            addch(' ');
+        }
+    }   
+    printw("] %5.1f%%", percent);
 }

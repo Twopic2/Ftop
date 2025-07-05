@@ -13,6 +13,7 @@
 #include "disk.h"
 #include "cpuinfo.h"
 #include "memalloc.h"
+#include "chart.h"
 
 #define PREVENT_OVERFLOW 100000
 #define MAX_CORES 128
@@ -250,7 +251,7 @@ int processID(Process *procs, int max) {
     return count;
 }
 
-int compareCpu(const void *a, const void *b) {
+inline int compareCpu(const void *a, const void *b) {
     const Process *p1 = (const Process *)a;
     const Process *p2 = (const Process *)b;
     
@@ -263,7 +264,7 @@ int compareCpu(const void *a, const void *b) {
     return 0;
 }
 
-int compareMem(const void *a, const void *b) {
+inline int compareMem(const void *a, const void *b) {
     const Process *p1 = (const Process *)a;
     const Process *p2 = (const Process *)b;
     
@@ -276,24 +277,16 @@ int compareMem(const void *a, const void *b) {
     return 0;
 }
 
-void bargraph(int y, int x, const char *label, float percent) {
-    int filled = (int)(BAR_WIDTH * percent / 100.0);
-    mvprintw(y, x, "%s [", label);
-    for (int i = 0; i < BAR_WIDTH; i++) {
-        if (i < filled) {
-            addch('=');
-        } else {
-            addch(' ');
-        }
-    }   
-    printw("] %5.1f%%", percent);
-}
-
 
 void processDisplay(Process *procs, int count, int scroll, int proc_row) {
     mvprintw(proc_row, 0, " PID    CPU    MEM    COMMAND"); 
 
-    int display_count = (count < PROCESS_DISPLAY) ? count : PROCESS_DISPLAY;
+    int display_count;
+    if (count < PROCESS_DISPLAY) {
+        display_count = count;
+    } else {
+        display_count = PROCESS_DISPLAY;
+    }
 
     for (int i = 0; i < display_count && (i + scroll) < count; i++) {
         int id = i + scroll;
@@ -330,11 +323,9 @@ int main() {
 //        long uptime = show_uptime();
 
         float disk = diskUsage("/");
-        long total_disk = diskTotal("/");
-
-      
+        long total_disk = diskTotal("/");      
+        
         int base_row = 2; 
-         
         for (int i = 0; i < coreAmount; i++) {
             int col = i / CORES_PER_COLUMN;
             int row = i % CORES_PER_COLUMN;
@@ -372,10 +363,7 @@ int main() {
         mvprintw(diskTotal_row, 0, "Root %ld GB", total_disk);
 
         int cache_row = diskTotal_row + 2;
-
-
         cacheusage(cache_row, 0);
-
         count = processID(procs, 10000);
         
         int proc_row = cache_row + 5;
@@ -388,9 +376,7 @@ int main() {
         */
         
         refresh();
-        
         int ch = getch();
-
         switch(ch) {
             case KEY_UP:
                 if (scroll > 0) {
@@ -404,7 +390,6 @@ int main() {
                 break;
         }
     }
-
     endwin();
     return 0;
 }
