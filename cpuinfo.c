@@ -38,7 +38,6 @@ int catCache(struct cacheinfo *cacheArray, int max_entries) {
 
     int count = 0;
     while ((entry = readdir(dir)) != NULL) {
-
         char level_path[512];
         char size_path[512];
 
@@ -60,7 +59,6 @@ int catCache(struct cacheinfo *cacheArray, int max_entries) {
                 
         int level = 0;
         int sizeKB = 0;
-
         char size_str[256] = {0};
 
         if (fscanf(flevel, "%d", &level) != 1) {
@@ -174,25 +172,27 @@ void displayISAInfo(int row, int col) {
 int catFrequency(struct ClockInfo *clocks, int max) {
     int count = 0; 
     FILE *id = fopen("/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq", "r");
-    
+
     for (int i = 0; i < max; i++) {
         char freqPath[256];
         snprintf(freqPath, sizeof(freqPath), 
-                "/sys/devices/system/cpu/cpu%d/cpufreq/scaling_cur_freq", i);
+                    "/sys/devices/system/cpu/cpu%d/cpufreq/scaling_cur_freq", i);
         FILE *fp = fopen(freqPath, "r");
         if (fp != NULL) {
             long freqs = 0;
             if (fscanf(fp, "%ld", &freqs) == 1) {
+                clocks = malloc(sizeof(struct ClockInfo));
                 clocks[count].MHz = freqs / 1000.0; 
                 clocks[count].core_id = i;
                 snprintf(clocks[count].speed, sizeof(clocks[count].speed), 
-                        "%.0f MHz", clocks[count].MHz);
+                            "%.0f MHz", clocks[count].MHz);
                 count++;
+                free(clocks);
             }
             fclose(fp);
         }
     }
-    
+        
     if (!id) {
         FILE *fp2 = fopen("/proc/cpuinfo", "r");
         if (fp2 != NULL) {

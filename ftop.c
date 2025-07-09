@@ -13,6 +13,9 @@
 #include "disk.h"
 #include "cpuinfo.h"
 
+#define NAME_MAX_LEN 256
+#define INITIAL_SIZE 256
+
 #define PREVENT_OVERFLOW 100000
 #define MAX_CORES 128
 #define CORES_PER_COLUMN 10
@@ -194,31 +197,48 @@ int processID(Process *procs, int max) {
         name[name_len] = '\0';
         
         FILE *cmd_fp = fopen(cmdline_path, "r");
+
         if (cmd_fp) {
-            char cmdline[PREVENT_OVERFLOW];
-            if (fgets(cmdline, sizeof(cmdline), cmd_fp)) {
-                if (strlen(cmdline) > 0) {
-                    char *base = strrchr(cmdline, '/');
-                    if (base) {
-                        strncpy(name, base + 1, 255);
-                    } else {
-                        strncpy(name, cmdline, 255);
+            size_t bufsize = INITIAL_SIZE;
+            char *cmdline = malloc(bufsize);
+            size_t len = 0;
+            int c;
+
+            while ((c = fgetc(cmd_fp)) != EOF && c != '\n') {
+                if (len + 1 >= bufsize) {
+                    bufsize *= 2;
+                    char *temp = realloc(cmdline, bufsize);
+                    if (!temp) {
+                        free(cmdline);
+                        perror("realloc failed");
+                        fclose(cmd_fp);
                     }
-                    
-                    name[255] = '\0';
-                    
-                    for (char *p = name; *p; p++) {
-                        if (*p < ' ') {
-                            *p = ' ';
-                        }
-                    }
+                    cmdline = temp;
+                }
+                cmdline[len++] = c;
+            }
+
+            cmdline[len] = '\0';
+            if (len > 0) {
+                char name[NAME_MAX_LEN];
+                char *base = strrchr(cmdline, '/');
+                if (base) {
+                    strncpy(name, base + 1, NAME_MAX_LEN - 1);
+                } else {
+                    strncpy(name, cmdline, NAME_MAX_LEN - 1);
+                }
+                name[NAME_MAX_LEN - 1] = '\0'; 
+
+                for (char *p = name; *p; p++) {
+                    if (*p < ' ') *p = ' ';
                 }
             }
-            fclose(cmd_fp);
+
+            free(cmdline);
+            fclose(cmd_fp);            
         }
         
         char *stat_ptr = name_end + 2; 
-        
         for (int i = 0; i < 12; i++) {
             while (*stat_ptr && *stat_ptr != ' ') {
                 stat_ptr++;
@@ -278,7 +298,7 @@ int compareCpu(const void *a, const void *b) {
 int compareMem(const void *a, const void *b) {
     const Process *p1 = (const Process *)a;
     const Process *p2 = (const Process *)b;
-    
+
     if (p2 -> mem > p1 -> mem) {
         return 1;
     } else if (p2 -> mem < p1 -> mem) {
